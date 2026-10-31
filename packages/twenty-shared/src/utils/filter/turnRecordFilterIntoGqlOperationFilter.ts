@@ -100,6 +100,7 @@ export type FieldShared = {
   name: string;
   type: FieldMetadataType;
   label: string;
+  isNullable?: boolean | null;
   relation?: { sourceObjectMetadata: { id: string } } | null;
   morphRelations?: FieldSharedMorphRelation[] | null;
 };
@@ -680,14 +681,31 @@ const buildDirectFieldGqlOperationFilter = ({
               eq: parseNumericFilterValue(recordFilter.value),
             } as FloatFilter,
           };
-        case RecordFilterOperand.IS_NOT:
-          return {
+        case RecordFilterOperand.IS_NOT: {
+          const notEqualFilter = {
             not: {
               [fieldMetadataItem.name]: {
                 eq: parseNumericFilterValue(recordFilter.value),
               } as FloatFilter,
             },
           };
+
+          // SQL NOT (x = v) drops NULL rows, so an empty nullable number must still match "is not"
+          if (fieldMetadataItem.isNullable !== true) {
+            return notEqualFilter;
+          }
+
+          return {
+            or: [
+              notEqualFilter,
+              {
+                [fieldMetadataItem.name]: {
+                  is: 'NULL',
+                } as FloatFilter,
+              },
+            ],
+          };
+        }
         default:
           throw new Error(
             `Unknown operand ${recordFilter.operand} for ${filterType} filter`,
