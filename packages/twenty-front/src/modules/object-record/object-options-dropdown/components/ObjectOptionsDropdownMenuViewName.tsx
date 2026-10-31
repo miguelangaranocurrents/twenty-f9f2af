@@ -11,7 +11,9 @@ import { type View } from '@/views/types/View';
 import { useUpdateViewFromCurrentState } from '@/views/view-picker/hooks/useUpdateViewFromCurrentState';
 import { viewPickerIsDirtyComponentState } from '@/views/view-picker/states/viewPickerIsDirtyComponentState';
 import { viewPickerIsPersistingComponentState } from '@/views/view-picker/states/viewPickerIsPersistingComponentState';
+import { viewPickerReferenceViewIdComponentState } from '@/views/view-picker/states/viewPickerReferenceViewIdComponentState';
 import { viewPickerSelectedIconComponentState } from '@/views/view-picker/states/viewPickerSelectedIconComponentState';
+import { viewPickerVisibilityComponentState } from '@/views/view-picker/states/viewPickerVisibilityComponentState';
 import { styled } from '@linaria/react';
 import { useEffect, useRef, useState } from 'react';
 import { Key } from 'ts-key-enum';
@@ -75,6 +77,12 @@ export const ObjectOptionsDropdownMenuViewName = ({
     useUpdateObjectViewOptions();
 
   const { updateViewFromCurrentState } = useUpdateViewFromCurrentState();
+  const setViewPickerReferenceViewId = useSetAtomComponentState(
+    viewPickerReferenceViewIdComponentState,
+  );
+  const setViewPickerVisibility = useSetAtomComponentState(
+    viewPickerVisibilityComponentState,
+  );
   const [viewName, setViewName] = useState(currentView?.name);
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -87,10 +95,21 @@ export const ObjectOptionsDropdownMenuViewName = ({
         return;
       }
 
+      // The view picker state is not populated from this dropdown, so target the current view explicitly
+      setViewPickerReferenceViewId(currentView.id);
+      setViewPickerVisibility(currentView.visibility);
+
       await updateViewFromCurrentState();
     },
     focusId: dropdownId,
-    dependencies: [viewPickerIsPersisting, updateViewFromCurrentState],
+    dependencies: [
+      viewPickerIsPersisting,
+      updateViewFromCurrentState,
+      currentView.id,
+      currentView.visibility,
+      setViewPickerReferenceViewId,
+      setViewPickerVisibility,
+    ],
   });
 
   const handleIconChange = ({ iconKey }: { iconKey: string }) => {
